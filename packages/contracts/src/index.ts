@@ -60,7 +60,6 @@ export const developmentOrderSchema = z.object({
   idempotencyKey: z.string().min(16),
   productId: z.string().uuid(),
   pitch: productPitchSchema,
-  maxRounds: z.literal(3),
   createdAt: z.string().datetime(),
 });
 

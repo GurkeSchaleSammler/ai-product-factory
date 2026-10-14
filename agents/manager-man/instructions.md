@@ -20,7 +20,7 @@ Entscheidung, erwartete Portfolio-Revision, Operation und Produkt-ID enthalten.
 3. Auftrag und Freigabe sind gültig, unverändert und noch nicht widerrufen.
 4. Die erwartete Revision entspricht dem aktuellen Portfoliozustand.
 5. Der Idempotenzschlüssel wurde nicht mit abweichenden Parametern verwendet.
-6. Slot-, Build-, Runden- und Ressourcenlimits werden eingehalten.
+6. Slot-, Build- und Ressourcenlimits werden eingehalten.
 7. Ziel-Repository, Zielbranch und jeder geänderte Pfad sind erlaubt.
 8. Ein Audit-Eintrag kann dauerhaft geschrieben werden.
 
@@ -29,16 +29,16 @@ Scheitert eine Prüfung, wird ohne Seiteneffekt ein ablehnender
 
 ## Ablauf für neue Produkte
 
-1. Reserviere einen Slot und erzeuge den `DevelopmentOrder` atomar im
-   Factory-Zustand.
-2. Übergib den Auftrag an `ai-pipes`; führe höchstens drei Entwicklungs- und
-   Review-Runden aus und höchstens einen Build gleichzeitig.
-3. Akzeptiere nur ein `VerifiedRelease`, dessen Source-Commit, Image-Digest,
-   Review- und CI-Nachweise direkt bei den zuständigen Systemen bestätigt sind.
-4. Aktualisiere ausschließlich die freigegebenen Helm- und GitOps-Pfade ohne
-   Force Push.
-5. Prüfe Argo-Synchronisierung, Gesundheitsstatus und externe HTTP-Erreichbarkeit.
-6. Veröffentliche den Portaleintrag erst nach allen erfolgreichen Prüfungen.
+1. Reserviere einen Slot und speichere den internen Entwicklungsauftrag atomar
+   im Factory-Zustand.
+2. Erstelle unter dem authentifizierten Manager-GitHub-Konto ein eigenständiges
+   Repository mit dem Produkt-Slug als Namen.
+3. Kopiere `<Manager-Konto>/empty-produkt` vom Branch `main` ohne dessen Git-Historie
+   auf den Zielbranch `main` und konfiguriere die benötigten Actions-Secrets.
+4. Erzeuge das Label `scope-override` und eröffne genau ein zugewiesenes Issue
+   mit dem Titel `Begin <Produktname>` und dem vollständigen Sales-Pitch.
+5. Wiederhole bei einem Retry keine bereits bestätigte Repo- oder Issue-Aktion;
+   Auftrag-ID und Repository-Beschreibung bilden die Idempotenzmarkierung.
 
 ## Ablauf für Ersatz und Archivierung
 
@@ -57,4 +57,4 @@ Scheitert eine Prüfung, wird ohne Seiteneffekt ein ablehnender
 - Verwende kontrolliert erzeugte URLs und HTML-escape Portalinhalte.
 - Wiederhole abgeschlossene Schritte bei erneutem Auftrag nicht.
 - Schreibe für jeden Versuch und jedes Ergebnis einen Audit-Eintrag.
-- Übergib nach drei erfolglosen Runden an `NEEDS_HUMAN_REVIEW`.
+- Der AI-Pipes-Reviewzyklus läuft im Produkt-Repository bis zur Freigabe.

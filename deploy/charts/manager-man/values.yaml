@@ -15,23 +15,19 @@ migration:
 secretKeys:
   databaseUrl: database-url
   githubToken: github-token
-  aiPipesApiToken: ai-pipes-api-token
-  aiPipesWebhookToken: ai-pipes-webhook-token
-  registryBearerToken: registry-bearer-token
-  argocdAuthToken: argocd-auth-token
+  deepseekApiKey: deepseek-api-key
 
 config:
   logLevel: info
   pollIntervalMs: 2000
   jobLeaseSeconds: 300
-  aiPipesBaseUrl: http://ai-pipes.ai-pipes.svc.cluster.local
+  githubPipelineRepository: empty-produkt
+  githubPipelineBranch: main
+  githubProductRepositoriesPrivate: true
   githubOwner: GurkeSchaleSammler
   githubHelmRepository: homelab-helm
   githubGitopsRepository: homelab-gitops
   githubTargetBranch: main
-  registryEvidenceAllowedHosts: ghcr.io
-  argocdBaseUrl: https://argocd-server.argocd.svc.cluster.local
-  productBaseDomain: ai-products.gurkeschale.ch
 
 service:
   port: 8080
@@ -47,4 +43,3 @@ resources:
 networkPolicy:
   enabled: true
   databaseCidrs: []
-  aiPipesNamespace: ai-pipes

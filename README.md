@@ -44,10 +44,14 @@ keine biografischen Eigenschaften realer Personen abgeleitet.
 
 ## Integration mit AI Pipes
 
-AI Developer und AI Reviewer bleiben im Repository `ai-pipes` und werden hier
-nicht als zusätzliche Factory-Agenten implementiert. Die Factory übergibt einen
-`DevelopmentOrder` und erhält ein `VerifiedRelease`. Der Transport dieser
-Aufträge ist noch nicht konfiguriert.
+`ai-pipes` ist kein deployter Dienst. Das private Repository
+`<Manager-Konto>/empty-produkt` auf `main` ist die vollständige
+GitHub-Actions-Vorlage für ein Produkt. Nach
+einer Freigabe erstellt Manager-Man unter seinem GitHub-Servicekonto ein
+eigenständiges Repository, kopiert die Vorlage ohne deren Git-Historie auf
+`main`, setzt die benötigten Actions-Secrets und eröffnet das zugewiesene Issue
+`Begin <Produktname>` mit dem vollständigen Sales-Pitch und dem Label
+`scope-override`. Dieses Issue startet den autonomen Entwicklungszyklus.
 
 ## Übergaben
 
@@ -56,8 +60,8 @@ Aufträge ist noch nicht konfiguriert.
 | Innovation-Man | Sales-Man | `ProductPitch` |
 | Sales-Man | deterministische Policy Engine | `PortfolioDecision` |
 | Policy Engine | Manager-Man | `ManagementCommand` |
-| Manager-Man | `ai-pipes` | `DevelopmentOrder` |
-| `ai-pipes` | Manager-Man | `VerifiedRelease` |
+| Manager-Man | GitHub | eigenständiges Produkt-Repository aus `empty-produkt:main` |
+| Manager-Man | Produkt-Repository | INIT-Issue mit vollständigem `ProductPitch` |
 
 ## Infrastrukturzuständigkeit
 
@@ -79,7 +83,8 @@ Markdown-Dateien und gewährt selbst keine Berechtigungen.
   `LIVE`, `ARCHIVING` und `ARCHIVE_FAILED`.
 - Ein geplanter Pitch alle 900 Sekunden, mit eindeutiger Fenster-ID.
 - Höchstens ein paralleler Build.
-- Höchstens drei Entwicklungs-/Review-Runden pro Auftrag.
+- Der Entwicklungs-/Review-Zyklus im Produkt-Repository läuft bis zur Freigabe;
+  die Factory begrenzt weiterhin parallele Produkt-Builds.
 - Tägliches LLM-Kostenlimit in CHF, tägliches Tokenlimit und Build-Timeout
   sind noch festzulegen. Fehlende Limits blockieren neue Arbeit.
 - Alle Grenzen werden serverseitig durchgesetzt.

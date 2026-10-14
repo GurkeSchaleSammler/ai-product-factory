@@ -6,8 +6,9 @@
 - PostgreSQL 15 oder neuer
 - Argo CD
 - drei in GHCR veröffentlichte Images
-- `ai-pipes` mit `POST /v1/development-orders` und Rückruf auf
-  `POST /v1/releases` des Manager-Service
+- Zugriff auf `<Manager-Konto>/empty-produkt` und dessen Branch `main`
+- ein separates GitHub-Servicekonto, unter dem Manager-Man Produkt-Repositories
+  erstellen und die AI-Pipes-Actions konfigurieren darf
 - die in [SECRETS.md](SECRETS.md) beschriebenen Secrets
 
 ## Datenbankrollen
@@ -92,7 +93,7 @@ SET daily_llm_cost_limit_chf = 5.00,
 WHERE singleton = true;
 ```
 
-Die Reihenfolge ist wichtig: Secrets, Netzwerk, ai-pipes-Rückruf und
+Die Reihenfolge ist wichtig: Secrets, GitHub-Repo-Erstellung, Actions und
 Healthchecks müssen funktionieren, bevor `automation_enabled` gesetzt wird.
 
 ## Not-Aus

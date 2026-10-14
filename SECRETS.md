@@ -20,8 +20,7 @@ Secretname gemäß Standardwert: `innovation-man-secrets`
 
 Image-Pull-Secret: `ghcr-innovation-man` mit ausschließlich `read:packages`.
 
-Innovation-Man benötigt keine GitHub-, Registry-, Argo-, Kubernetes- oder
-ai-pipes-Zugangsdaten.
+Innovation-Man benötigt keine GitHub-, Registry-, Argo- oder Kubernetes-Zugangsdaten.
 
 ## Sales-Man
 
@@ -34,8 +33,7 @@ Secretname gemäß Standardwert: `sales-man-secrets`
 
 Image-Pull-Secret: `ghcr-sales-man` mit ausschließlich `read:packages`.
 
-Sales-Man benötigt keine GitHub-, Registry-, Argo-, Kubernetes- oder
-ai-pipes-Zugangsdaten.
+Sales-Man benötigt keine GitHub-, Registry-, Argo- oder Kubernetes-Zugangsdaten.
 
 ## Manager-Man
 
@@ -44,11 +42,8 @@ Secretname gemäß Standardwert: `manager-man-secrets`
 | Schlüssel | Inhalt |
 |---|---|
 | `database-url` | PostgreSQL-URL für die Laufzeitrolle `manager_man` |
-| `github-token` | Token des separaten GitHub-Servicekontos |
-| `ai-pipes-api-token` | Token zum Erstellen von `DevelopmentOrder`s in ai-pipes |
-| `ai-pipes-webhook-token` | mindestens 32 zufällige Zeichen; ai-pipes sendet damit `VerifiedRelease` zurück |
-| `registry-bearer-token` | optionaler read-only Token zur Prüfung des Image-Digests |
-| `argocd-auth-token` | read-only Argo-CD-API-Token zur Statusprüfung |
+| `github-token` | Classic PAT des separaten Manager-GitHub-Kontos; wird in neue Produkt-Repositories zusätzlich als `TAMBINOS_PAT` hinterlegt |
+| `deepseek-api-key` | DeepSeek-Key für die AI-Pipes-Workflows; wird verschlüsselt als Repo-Secret `DEEPSEEK_API_KEY` gesetzt |
 
 Image-Pull-Secret: `ghcr-manager-man` mit ausschließlich `read:packages`. Dafür
 wird nicht `github-token` wiederverwendet.
@@ -60,13 +55,13 @@ in den Manager-Laufzeitpod.
 
 ## GitHub-Rechte des Manager-Kontos
 
-Der Code verwendet ausschließlich die GitHub REST API. Benötigt werden:
+Der Code verwendet ausschließlich die GitHub REST API. Der Classic PAT benötigt:
 
-- Contents: Lesen und Schreiben in `homelab-helm` und `homelab-gitops`
-- Contents: Lesen in den erzeugten Produkt-Repositories
-- Checks: Lesen in den Produkt-Repositories
-- Pull requests: Lesen in den Produkt-Repositories
-- Metadata: Lesen
+- `repo` für private Repositories, Inhalte, Issues, Pull Requests und Actions-Secrets
+- `workflow`, weil die kopierte Vorlage Dateien unter `.github/workflows/` enthält
+- `read:packages` und `write:packages`, wenn Produkt-Workflows GHCR verwenden
+- `delete:packages` nur wenn Manager-Man Images löschen soll
+- `delete_repo` nur wenn Manager-Man Produkt-Repositories löschen soll
 
 Ein separater Account ist sinnvoll. Ein uneingeschränkter Classic-PAT mit
 Kontovollzugriff ist technisch nicht erforderlich und vergrößert den möglichen
@@ -95,15 +90,12 @@ kubectl -n ai-product-factory create secret generic sales-man-secrets \
 kubectl -n ai-product-factory create secret generic manager-man-secrets \
   --from-literal=database-url='postgresql://manager_man:…@postgres:5432/ai_product_factory' \
   --from-literal=github-token='…' \
-  --from-literal=ai-pipes-api-token='…' \
-  --from-literal=ai-pipes-webhook-token='…' \
-  --from-literal=registry-bearer-token='…' \
-  --from-literal=argocd-auth-token='…'
+  --from-literal=deepseek-api-key='…'
 ```
 
 ## Nicht geheime Chartwerte
 
-Modellname, LLM-Endpoint, GitHub-Organisation, Repositorynamen, ai-pipes-URL,
-Argo-CD-URL, Registry-Host-Allowlist und Produktdomain sind Konfiguration und
-stehen in den jeweiligen `values.yaml`. Tokens und Datenbankkennwörter gehören
-immer in die oben genannten Secrets.
+Modellname, LLM-Endpoint, Repositorynamen, Pipeline-Branch und die Sichtbarkeit
+neuer Produkt-Repositories sind Konfiguration und stehen in den jeweiligen
+`values.yaml`. Tokens und Datenbankkennwörter gehören immer in die oben
+genannten Secrets.

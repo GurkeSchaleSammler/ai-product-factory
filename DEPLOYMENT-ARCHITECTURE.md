@@ -22,11 +22,13 @@ Sales-Man (Deployment/Worker)
 Policy Engine (deterministisches Modul im Manager-Prozess)
         │ ManagementCommand
         ▼
-Manager-Man (Deployment/Worker) ── DevelopmentOrder ──► ai-pipes
-        ▲                                                    │
-        └──────────────────── VerifiedRelease ───────────────┘
+Manager-Man (Deployment/Worker)
         │
-        └──► GitHub / Registry / Argo / externe HTTP-Prüfung
+        ├──► neues GitHub-Produkt-Repository
+        │      Quelle: <Manager-Konto>/empty-produkt, Branch main
+        │      Ziel: main im Manager-GitHub-Konto
+        │
+        └──► INIT-Issue "Begin <Produktname>" mit vollständigem Pitch
 ```
 
 Die Policy Engine ist kein vierter Agent. Sie wird als deterministisches,
@@ -102,15 +104,13 @@ Das lokale Policy-Modul prüft Slots, Mindestwerte, Schutzfrist, Evidenz,
 Freigaben, Budgets und Not-Aus. Nur bei Erfolg entsteht ein
 `ManagementCommand`.
 
-Reservierung und `DevelopmentOrder` werden gemeinsam in einer
+Reservierung und interner Entwicklungsauftrag werden gemeinsam in einer
 Datenbanktransaktion gespeichert. Externe Aktionen werden anschließend über die
-Outbox idempotent ausgeführt. Jede Aktion trägt Auftrag-ID und
-Idempotenzschlüssel. Eine bereits bestätigte Aktion wird nicht wiederholt.
-
-Ein `VerifiedRelease` wird nicht als Behauptung akzeptiert: Manager-Man prüft
-Source-Commit, Review, CI und Image-Digest direkt bei den zuständigen Systemen,
-bevor Helm/GitOps geändert werden. Veröffentlichung folgt erst nach bestätigtem
-Argo- und HTTP-Status.
+Outbox idempotent ausgeführt. Manager-Man erstellt ein eigenständiges Repository,
+kopiert die Dateien aus `<Manager-Konto>/empty-produkt:main` ohne Quellhistorie nach
+`main`, setzt die Actions-Secrets und eröffnet das zugewiesene INIT-Issue mit
+`scope-override`. Auftrag-ID und Repository-Beschreibung verhindern, dass ein
+Retry ein fremdes Repository übernimmt oder ein zweites Start-Issue erzeugt.
 
 ## Datenbank und Berechtigungen
 
@@ -138,7 +138,7 @@ und verwendet kein gemeinsames `envFrom`-Sammelsecret.
 |---|---|
 | Innovation-Man | LLM-Zugang, eigene PostgreSQL-Zugangsdaten |
 | Sales-Man | LLM-Zugang, eigene PostgreSQL-Zugangsdaten |
-| Manager-Man | eigene PostgreSQL-Zugangsdaten, GitHub-App, ai-pipes-Authentisierung, Registry-/Argo-Zugang soweit erforderlich |
+| Manager-Man | eigene PostgreSQL-Zugangsdaten, GitHub-PAT und DeepSeek-Key für die erzeugten Produkt-Repositories |
 
 Empfohlen ist External Secrets Operator, SOPS oder Sealed Secrets. Unabhängig vom
 gewählten Backend werden drei getrennte Kubernetes-Secrets erzeugt. Innovation-
@@ -171,6 +171,6 @@ sauber und schreiben strukturierte JSON-Logs ohne Secretwerte.
 5. Policy Engine und Manager-Man ohne externe Schreibzugänge testen.
 6. Drei Images bauen, signieren und per Digest referenzieren.
 7. Drei getrennte Helm-Charts mit separaten Secrets und ServiceAccounts bauen.
-8. End-to-End-Tests mit simuliertem `ai-pipes`, GitHub, Registry und Argo ausführen.
+8. End-to-End-Tests mit simulierter GitHub-Repo-Erstellung, Secret-Konfiguration und Issue-Eröffnung ausführen.
 9. Budgets, Timeouts und Policywerte bestätigen.
 10. Erst danach die Automation kontrolliert aktivieren.

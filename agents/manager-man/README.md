@@ -9,12 +9,12 @@ Er setzt ausschließlich gültige, von der Policy Engine genehmigte
 - genehmigter `ManagementCommand`
 - erwartete Portfolio-Revision
 - eindeutiger Idempotenzschlüssel
-- verifizierbare CI-, Review-, Registry- und Laufzeitnachweise
-- `VerifiedRelease` aus `ai-pipes`
+- vollständiger `ProductPitch` des Sales-Man
 
 ## Ergebnisse
 
-- `DevelopmentOrder` an `ai-pipes`
+- eigenständiges Produkt-Repository aus `<Manager-Konto>/empty-produkt:main`
+- zugewiesenes INIT-Issue `Begin <Produktname>` mit dem vollständigen Pitch
 - nachvollziehbarer `ManagementResult`
 - dauerhafte Statusänderung mit Audit-Eintrag
 - bei erfolgreicher Freigabe ein verifiziertes Deployment und ein aktualisierter
@@ -34,8 +34,7 @@ Zielbranch ist `main`. Änderungen sind auf folgende Pfade begrenzt:
 - Ohne gültigen Auftrag, passende Revision, Idempotenzschlüssel und Auditierung
   erfolgt keine Mutation.
 - Force Push und Schreibzugriffe außerhalb der erlaubten Pfade sind verboten.
-- Es gelten höchstens zehn belegte Slots, ein paralleler Build und drei
-  Entwicklungs-/Review-Runden pro Auftrag.
+- Es gelten höchstens zehn belegte Slots und ein paralleler Produktstart.
 - Releases werden erst nach unabhängig verifizierter CI, Review und Registry
   sowie bestätigtem Argo-Status und externer HTTP-Prüfung veröffentlicht.
 - Ein Archivierungsslot wird erst nach bestätigtem Abschluss freigegeben.

@@ -42,33 +42,20 @@ spec:
             - name: GITHUB_TOKEN
               valueFrom:
                 secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.githubToken }} }
-            - name: AI_PIPES_API_TOKEN
+            - name: DEEPSEEK_API_KEY
               valueFrom:
-                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.aiPipesApiToken }} }
-            - name: AI_PIPES_WEBHOOK_TOKEN
-              valueFrom:
-                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.aiPipesWebhookToken }} }
-            - name: REGISTRY_BEARER_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.existingSecret }}
-                  key: {{ .Values.secretKeys.registryBearerToken }}
-                  optional: true
-            - name: ARGOCD_AUTH_TOKEN
-              valueFrom:
-                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.argocdAuthToken }} }
+                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.deepseekApiKey }} }
             - { name: LOG_LEVEL, value: {{ .Values.config.logLevel | quote }} }
             - { name: POLL_INTERVAL_MS, value: {{ .Values.config.pollIntervalMs | quote }} }
             - { name: JOB_LEASE_SECONDS, value: {{ .Values.config.jobLeaseSeconds | quote }} }
             - { name: RUN_MIGRATIONS, value: "false" }
-            - { name: AI_PIPES_BASE_URL, value: {{ .Values.config.aiPipesBaseUrl | quote }} }
+            - { name: GITHUB_PIPELINE_REPOSITORY, value: {{ .Values.config.githubPipelineRepository | quote }} }
+            - { name: GITHUB_PIPELINE_BRANCH, value: {{ .Values.config.githubPipelineBranch | quote }} }
+            - { name: GITHUB_PRODUCT_REPOSITORIES_PRIVATE, value: {{ .Values.config.githubProductRepositoriesPrivate | quote }} }
             - { name: GITHUB_OWNER, value: {{ .Values.config.githubOwner | quote }} }
             - { name: GITHUB_HELM_REPOSITORY, value: {{ .Values.config.githubHelmRepository | quote }} }
             - { name: GITHUB_GITOPS_REPOSITORY, value: {{ .Values.config.githubGitopsRepository | quote }} }
             - { name: GITHUB_TARGET_BRANCH, value: {{ .Values.config.githubTargetBranch | quote }} }
-            - { name: REGISTRY_EVIDENCE_ALLOWED_HOSTS, value: {{ .Values.config.registryEvidenceAllowedHosts | quote }} }
-            - { name: ARGOCD_BASE_URL, value: {{ .Values.config.argocdBaseUrl | quote }} }
-            - { name: PRODUCT_BASE_DOMAIN, value: {{ .Values.config.productBaseDomain | quote }} }
           livenessProbe:
             httpGet: { path: /health/live, port: http }
           readinessProbe:
