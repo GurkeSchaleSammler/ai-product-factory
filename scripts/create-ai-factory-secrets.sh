@@ -28,14 +28,14 @@ echo "Creating namespace $NS ..."
 k create namespace "$NS" --dry-run=client -o yaml | k apply -f -
 
 k -n "$NS" get secret innovation-man-secrets -o jsonpath='{.data.database-url}' | base64 -d > "$secret_dir/innovation-database-url"
-prompt_secret "Innovation-Man LLM API key" "$secret_dir/innovation-llm-api-key"
+prompt_secret "Innovation-Man DeepSeek API key" "$secret_dir/innovation-llm-api-key"
 k -n "$NS" create secret generic innovation-man-secrets \
   --from-file=database-url="$secret_dir/innovation-database-url" \
   --from-file=llm-api-key="$secret_dir/innovation-llm-api-key" \
   --dry-run=client -o yaml | k apply -f -
 
 k -n "$NS" get secret sales-man-secrets -o jsonpath='{.data.database-url}' | base64 -d > "$secret_dir/sales-database-url"
-prompt_secret "Sales-Man LLM API key" "$secret_dir/sales-llm-api-key"
+prompt_secret "Sales-Man DeepSeek API key" "$secret_dir/sales-llm-api-key"
 k -n "$NS" create secret generic sales-man-secrets \
   --from-file=database-url="$secret_dir/sales-database-url" \
   --from-file=llm-api-key="$secret_dir/sales-llm-api-key" \

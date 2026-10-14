@@ -12,8 +12,8 @@ secretKeys:
   llmApiKey: llm-api-key
 
 config:
-  llmBaseUrl: https://api.openai.com/v1
-  llmModel: SET_ME
+  llmBaseUrl: https://api.deepseek.com
+  llmModel: deepseek-flash
   llmMaxOutputTokens: 2000
   llmEstimatedCallCostChf: "0.10"
   logLevel: info

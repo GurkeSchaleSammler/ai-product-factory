@@ -16,7 +16,7 @@ Secretname gemäß Standardwert: `innovation-man-secrets`
 | Schlüssel | Inhalt |
 |---|---|
 | `database-url` | PostgreSQL-URL für die eingeschränkte Rolle `innovation_man` |
-| `llm-api-key` | API-Key des verwendeten LLM-Providers |
+| `llm-api-key` | DeepSeek API-Key für `deepseek-flash` |
 
 Image-Pull-Secret: `ghcr-innovation-man` mit ausschließlich `read:packages`.
 
@@ -29,7 +29,7 @@ Secretname gemäß Standardwert: `sales-man-secrets`
 | Schlüssel | Inhalt |
 |---|---|
 | `database-url` | PostgreSQL-URL für die eingeschränkte Rolle `sales_man` |
-| `llm-api-key` | API-Key des verwendeten LLM-Providers |
+| `llm-api-key` | DeepSeek API-Key für `deepseek-flash` |
 
 Image-Pull-Secret: `ghcr-sales-man` mit ausschließlich `read:packages`.
 
