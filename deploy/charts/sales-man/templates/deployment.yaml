@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sales-man.fullname" . }}
+  labels:
+    {{- include "sales-man.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "sales-man.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "sales-man.labels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      serviceAccountName: {{ include "sales-man.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: sales-man
+          image: "{{ required "image.repository is required" .Values.image.repository }}@{{ required "image.digest is required" .Values.image.digest }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "existingSecret is required" .Values.existingSecret }}
+                  key: {{ .Values.secretKeys.databaseUrl }}
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: {{ .Values.secretKeys.llmApiKey }}
+            - name: LLM_BASE_URL
+              value: {{ .Values.config.llmBaseUrl | quote }}
+            - name: LLM_MODEL
+              value: {{ required "config.llmModel is required" .Values.config.llmModel | quote }}
+            - name: LLM_MAX_OUTPUT_TOKENS
+              value: {{ .Values.config.llmMaxOutputTokens | quote }}
+            - name: LLM_ESTIMATED_CALL_COST_CHF
+              value: {{ .Values.config.llmEstimatedCallCostChf | quote }}
+            - name: LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+            - name: POLL_INTERVAL_MS
+              value: {{ .Values.config.pollIntervalMs | quote }}
+            - name: JOB_LEASE_SECONDS
+              value: {{ .Values.config.jobLeaseSeconds | quote }}
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

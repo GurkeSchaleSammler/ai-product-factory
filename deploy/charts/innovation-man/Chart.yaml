@@ -1,0 +1,6 @@
+apiVersion: v2
+name: innovation-man
+description: Fifteen-minute product pitch CronJob for the AI Product Factory
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

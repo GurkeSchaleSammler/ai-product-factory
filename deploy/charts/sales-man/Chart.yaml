@@ -1,0 +1,6 @@
+apiVersion: v2
+name: sales-man
+description: Portfolio evaluation worker for the AI Product Factory
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

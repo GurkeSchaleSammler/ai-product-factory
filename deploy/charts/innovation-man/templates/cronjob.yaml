@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "innovation-man.fullname" . }}
+  labels:
+    {{- include "innovation-man.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.schedule | quote }}
+  timeZone: {{ .Values.timeZone | quote }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 600
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            {{- include "innovation-man.labels" . | nindent 12 }}
+        spec:
+          imagePullSecrets:
+            {{- toYaml .Values.imagePullSecrets | nindent 12 }}
+          serviceAccountName: {{ include "innovation-man.fullname" . }}
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: innovation-man
+              image: "{{ required "image.repository is required" .Values.image.repository }}@{{ required "image.digest is required" .Values.image.digest }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ required "existingSecret is required" .Values.existingSecret }}
+                      key: {{ .Values.secretKeys.databaseUrl }}
+                - name: LLM_API_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.existingSecret }}
+                      key: {{ .Values.secretKeys.llmApiKey }}
+                - name: LLM_BASE_URL
+                  value: {{ .Values.config.llmBaseUrl | quote }}
+                - name: LLM_MODEL
+                  value: {{ required "config.llmModel is required" .Values.config.llmModel | quote }}
+                - name: LLM_MAX_OUTPUT_TOKENS
+                  value: {{ .Values.config.llmMaxOutputTokens | quote }}
+                - name: LLM_ESTIMATED_CALL_COST_CHF
+                  value: {{ .Values.config.llmEstimatedCallCostChf | quote }}
+                - name: LOG_LEVEL
+                  value: {{ .Values.config.logLevel | quote }}
+              resources:
+                {{- toYaml .Values.resources | nindent 16 }}

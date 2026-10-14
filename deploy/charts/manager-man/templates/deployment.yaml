@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "manager-man.fullname" . }}
+  labels:
+    {{- include "manager-man.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "manager-man.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "manager-man.labels" . | nindent 8 }}
+    spec:
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+      serviceAccountName: {{ include "manager-man.fullname" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: manager-man
+          image: "{{ required "image.repository is required" .Values.image.repository }}@{{ required "image.digest is required" .Values.image.digest }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: {{ required "existingSecret is required" .Values.existingSecret }}, key: {{ .Values.secretKeys.databaseUrl }} }
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.githubToken }} }
+            - name: AI_PIPES_API_TOKEN
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.aiPipesApiToken }} }
+            - name: AI_PIPES_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.aiPipesWebhookToken }} }
+            - name: REGISTRY_BEARER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.existingSecret }}
+                  key: {{ .Values.secretKeys.registryBearerToken }}
+                  optional: true
+            - name: ARGOCD_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.argocdAuthToken }} }
+            - { name: LOG_LEVEL, value: {{ .Values.config.logLevel | quote }} }
+            - { name: POLL_INTERVAL_MS, value: {{ .Values.config.pollIntervalMs | quote }} }
+            - { name: JOB_LEASE_SECONDS, value: {{ .Values.config.jobLeaseSeconds | quote }} }
+            - { name: RUN_MIGRATIONS, value: "false" }
+            - { name: AI_PIPES_BASE_URL, value: {{ .Values.config.aiPipesBaseUrl | quote }} }
+            - { name: GITHUB_OWNER, value: {{ .Values.config.githubOwner | quote }} }
+            - { name: GITHUB_HELM_REPOSITORY, value: {{ .Values.config.githubHelmRepository | quote }} }
+            - { name: GITHUB_GITOPS_REPOSITORY, value: {{ .Values.config.githubGitopsRepository | quote }} }
+            - { name: GITHUB_TARGET_BRANCH, value: {{ .Values.config.githubTargetBranch | quote }} }
+            - { name: REGISTRY_EVIDENCE_ALLOWED_HOSTS, value: {{ .Values.config.registryEvidenceAllowedHosts | quote }} }
+            - { name: ARGOCD_BASE_URL, value: {{ .Values.config.argocdBaseUrl | quote }} }
+            - { name: PRODUCT_BASE_DOMAIN, value: {{ .Values.config.productBaseDomain | quote }} }
+          livenessProbe:
+            httpGet: { path: /health/live, port: http }
+          readinessProbe:
+            httpGet: { path: /health/ready, port: http }
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

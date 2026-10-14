@@ -1,0 +1,32 @@
+image:
+  repository: ghcr.io/gurkeschalesammler/ai-product-factory-innovation-man
+  digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+  pullPolicy: IfNotPresent
+imagePullSecrets:
+  - name: ghcr-innovation-man
+
+schedule: "*/15 * * * *"
+timeZone: Europe/Zurich
+existingSecret: innovation-man-secrets
+secretKeys:
+  databaseUrl: database-url
+  llmApiKey: llm-api-key
+
+config:
+  llmBaseUrl: https://api.openai.com/v1
+  llmModel: SET_ME
+  llmMaxOutputTokens: 2000
+  llmEstimatedCallCostChf: "0.10"
+  logLevel: info
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 96Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+networkPolicy:
+  enabled: true
+  databaseCidrs: []

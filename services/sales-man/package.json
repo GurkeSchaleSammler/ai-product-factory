@@ -1,0 +1,20 @@
+{
+  "name": "@factory/sales-man",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@factory/contracts": "workspace:*",
+    "@factory/database": "workspace:*",
+    "@factory/llm": "workspace:*",
+    "fastify": "^5.6.1",
+    "pino": "^9.9.4",
+    "zod": "^4.1.11"
+  }
+}
