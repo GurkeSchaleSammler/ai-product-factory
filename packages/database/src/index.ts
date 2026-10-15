@@ -13,6 +13,7 @@ export interface FactorySettings {
   emergencyStop: boolean;
   portfolioRevision: number;
   dailyLlmCostLimitChf: number | null;
+  llmBudgetLimitsEnabled: boolean;
   dailyTokenLimit: number | null;
   buildTimeoutSeconds: number | null;
   maxOccupiedSlots: number;
@@ -85,6 +86,7 @@ export async function getFactorySettings(client: Database | Transaction): Promis
     emergency_stop: boolean;
     portfolio_revision: string;
     daily_llm_cost_limit_chf: string | null;
+    llm_budget_limits_enabled: boolean;
     daily_token_limit: string | null;
     build_timeout_seconds: number | null;
     max_occupied_slots: number;
@@ -99,6 +101,7 @@ export async function getFactorySettings(client: Database | Transaction): Promis
     emergencyStop: row.emergency_stop,
     portfolioRevision: Number(row.portfolio_revision),
     dailyLlmCostLimitChf: row.daily_llm_cost_limit_chf === null ? null : Number(row.daily_llm_cost_limit_chf),
+    llmBudgetLimitsEnabled: row.llm_budget_limits_enabled,
     dailyTokenLimit: row.daily_token_limit === null ? null : Number(row.daily_token_limit),
     buildTimeoutSeconds: row.build_timeout_seconds,
     maxOccupiedSlots: row.max_occupied_slots,
@@ -111,8 +114,8 @@ export async function getFactorySettings(client: Database | Transaction): Promis
 export function settingsPermitNewWork(settings: FactorySettings): boolean {
   return settings.automationEnabled
     && !settings.emergencyStop
-    && settings.dailyLlmCostLimitChf !== null
-    && settings.dailyTokenLimit !== null
+    && (!settings.llmBudgetLimitsEnabled ||
+      (settings.dailyLlmCostLimitChf !== null && settings.dailyTokenLimit !== null))
     && settings.buildTimeoutSeconds !== null;
 }
 
@@ -134,9 +137,8 @@ export async function reserveLlmBudget(
            tokens = tokens + $2,
            updated_at = now()
        WHERE usage_date = CURRENT_DATE
-         AND cost_chf + $1 <= $3
-         AND tokens + $2 <= $4`,
-      [estimatedCostChf, reservedTokens, settings.dailyLlmCostLimitChf, settings.dailyTokenLimit],
+         AND (NOT $5::boolean OR (cost_chf + $1 <= $3 AND tokens + $2 <= $4))`,
+      [estimatedCostChf, reservedTokens, settings.dailyLlmCostLimitChf, settings.dailyTokenLimit, settings.llmBudgetLimitsEnabled],
     );
     return result.rowCount === 1;
   }, "SERIALIZABLE");

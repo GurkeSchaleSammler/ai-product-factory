@@ -124,6 +124,13 @@ Healthchecks müssen funktionieren, bevor `automation_enabled` gesetzt wird.
 
 ## Not-Aus
 
+Für einen zeitweiligen Test kann ausschließlich das tägliche LLM-Budgetlimit
+mit `UPDATE factory_settings SET llm_budget_limits_enabled=false WHERE singleton=true;`
+ausgeschaltet werden. Die Nutzung wird weiter gezählt; Not-Aus, Build- und
+Portfolio-Grenzen gelten weiter. `true` aktiviert die zuvor gesetzten
+Kosten- und Tokenlimits wieder. Das Pitchintervall erlaubt `1` oder `15`
+Minuten; CronJob-Schedule und `pitch_interval_minutes` gemeinsam umstellen.
+
 ```sql
 UPDATE factory_settings
 SET emergency_stop = true,

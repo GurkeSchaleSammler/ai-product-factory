@@ -8,6 +8,7 @@ const settings: FactorySettings = {
   emergencyStop: false,
   portfolioRevision: 4,
   dailyLlmCostLimitChf: 10,
+  llmBudgetLimitsEnabled: true,
   dailyTokenLimit: 100_000,
   buildTimeoutSeconds: 1800,
   maxOccupiedSlots: 10,

@@ -28,7 +28,7 @@ export function evaluatePolicy(input: PolicyInput): PolicyResult {
   const now = input.now ?? new Date();
   if (!settings.automationEnabled) return { approved: false, reason: "automation is disabled" };
   if (settings.emergencyStop) return { approved: false, reason: "emergency stop is active" };
-  if (settings.dailyLlmCostLimitChf === null || settings.dailyTokenLimit === null || settings.buildTimeoutSeconds === null) {
+  if ((settings.llmBudgetLimitsEnabled && (settings.dailyLlmCostLimitChf === null || settings.dailyTokenLimit === null)) || settings.buildTimeoutSeconds === null) {
     return { approved: false, reason: "required limits are missing" };
   }
   if (decision.portfolioRevision !== settings.portfolioRevision) {
