@@ -177,7 +177,7 @@ export class GitHubWriter {
   async #setActionsEnabled(repository: string, enabled: boolean): Promise<void> {
     await this.#request(`/repos/${this.#repoPath(repository)}/actions/permissions`, {
       method: "PUT",
-      body: JSON.stringify({ enabled, allowed_actions: "all" }),
+      body: JSON.stringify(enabled ? { enabled: true, allowed_actions: "all" } : { enabled: false }),
     });
   }
 

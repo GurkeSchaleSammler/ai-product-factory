@@ -99,5 +99,10 @@ describe("GitHubWriter.createProductRepository", () => {
     expect(issueRequest?.body?.body).toContain("## Validation plan\n\nInterview five teams");
     expect(issueRequest?.body?.body).toContain(`<!-- factory-development-order:${orderId} -->`);
     expect(requests.filter((request) => /\/actions\/secrets\/(TAMBINOS_PAT|DEEPSEEK_API_KEY)$/.test(request.url)).length).toBe(2);
+    const actionsRequests = requests.filter((request) => request.url.endsWith("/actions/permissions"));
+    expect(actionsRequests.map((request) => request.body)).toEqual([
+      { enabled: false },
+      { enabled: true, allowed_actions: "all" },
+    ]);
   });
 });
