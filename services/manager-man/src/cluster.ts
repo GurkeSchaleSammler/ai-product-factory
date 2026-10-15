@@ -25,8 +25,8 @@ export async function applicationReady(slug: string, revision: string): Promise<
     app.status.operationState?.phase === "Succeeded";
 }
 
-export async function frontendReady(slug: string): Promise<boolean> {
-  const response = await fetch(`https://${slug}.ai-products.gurkeschale.ch/`, {
+export async function frontendReady(slug: string, domain = "gurkeschale.ch"): Promise<boolean> {
+  const response = await fetch(`https://${slug}.${domain}/`, {
     signal: AbortSignal.timeout(15_000), redirect: "manual",
   });
   await response.body?.cancel();

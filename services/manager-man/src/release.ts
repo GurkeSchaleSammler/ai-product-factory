@@ -53,7 +53,7 @@ export async function verifyImage(release: ProductRelease, token: string): Promi
   }
 }
 
-export function adaptChartFile(path: string, content: string, slug: string): string {
+export function adaptChartFile(path: string, content: string, slug: string, domain = "gurkeschale.ch"): string {
   if (path.endsWith(".yaml") || path.endsWith(".yml")) {
     content = content.replace(/\.Values\.image\.repository\s*}}:\s*{{\s*\.Values\.image\.tag/g,
       ".Values.image.repository }}@{{ .Values.image.digest");
@@ -65,7 +65,7 @@ export function adaptChartFile(path: string, content: string, slug: string): str
     }
     if (/kind:\s*Ingress\s/.test(content)) {
       content = content.replace(/(metadata:\r?\n)/, '$1  annotations:\n    cert-manager.io/cluster-issuer: letsencrypt-cloudflare\n');
-      content = content.replace(/(\nspec:\r?\n)/, `$1  tls:\n    - hosts: [${slug}.ai-products.gurkeschale.ch]\n      secretName: ${slug}-tls\n`);
+      content = content.replace(/(\nspec:\r?\n)/, `$1  tls:\n    - hosts: [${slug}.${domain}]\n      secretName: ${slug}-tls\n`);
     }
   }
   return content;
@@ -158,7 +158,7 @@ spec:
 }
 
 export async function publishRelease(github: GitHubWriter, release: ProductRelease, slug: string,
-  helmRepo: string, gitopsRepo: string, owner: string, correlationId: string): Promise<string> {
+  helmRepo: string, gitopsRepo: string, owner: string, correlationId: string, domain = "gurkeschale.ch"): Promise<string> {
   const tree = await github.productRequest<{ truncated: boolean; tree: Array<{ path: string; type: string; mode: string; sha: string }> }>(
     release.sourceRepository, `/git/trees/${release.sourceCommit}?recursive=1`);
   if (tree.truncated) throw new Error("release tree truncated");
@@ -170,10 +170,10 @@ export async function publishRelease(github: GitHubWriter, release: ProductRelea
     const relative = entry.path.slice(release.chartPath.length + 1);
     if (relative.includes("..")) throw new Error("invalid chart path");
     const blob = await github.productRequest<{ content: string }>(release.sourceRepository, `/git/blobs/${entry.sha}`);
-    files[`charts/ai-products/${slug}/${relative}`] = adaptChartFile(relative, Buffer.from(blob.content, "base64").toString("utf8"), slug);
+    files[`charts/ai-products/${slug}/${relative}`] = adaptChartFile(relative, Buffer.from(blob.content, "base64").toString("utf8"), slug, domain);
   }
   files[`charts/ai-products/${slug}/templates/factory-registry.yaml`] = pullSecretHook(slug);
-  files[`charts/ai-products/${slug}/values-factory.yaml`] = `image:\n  repository: ${release.imageRepository}\n  digest: ${release.imageDigest}\ningress:\n  enabled: true\n  className: traefik-public\n  host: ${slug}.ai-products.gurkeschale.ch\n`;
+  files[`charts/ai-products/${slug}/values-factory.yaml`] = `image:\n  repository: ${release.imageRepository}\n  digest: ${release.imageDigest}\ningress:\n  enabled: true\n  className: traefik-public\n  host: ${slug}.${domain}\n`;
   const helmCommit = await github.publishFiles(helmRepo, files, correlationId);
   await github.publishFiles(gitopsRepo, {
     [`applications/ai-products/${slug}.yaml`]: `apiVersion: argoproj.io/v1alpha1

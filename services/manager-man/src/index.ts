@@ -36,6 +36,7 @@ const configSchema = z.object({
   GITHUB_TOKEN: z.string().min(20),
   GITHUB_INFRA_TOKEN: z.string().min(20).optional(),
   RELEASE_POLL_INTERVAL_MS: z.coerce.number().int().min(10_000).default(60_000),
+  PRODUCT_BASE_DOMAIN: z.string().regex(/^[a-z0-9.-]+$/).default("gurkeschale.ch"),
   DEEPSEEK_API_KEY: z.string().min(1),
   GITHUB_PRODUCT_OWNER: z.string().min(1).default("sechssiebe67-wq"),
   GITHUB_PIPELINE_OWNER: z.string().min(1).optional(),
@@ -90,12 +91,12 @@ async function pollReleases(): Promise<void> {
         const stored = await database.query<{ payload: { helmCommit?: string; sourceCommit: string } }>(
           "SELECT payload FROM verified_releases WHERE product_id=$1 ORDER BY received_at DESC LIMIT 1", [product.id]);
         const current = stored.rows[0]?.payload;
-        if (current?.helmCommit && await applicationReady(product.slug, current.helmCommit) && await frontendReady(product.slug)) {
+        if (current?.helmCommit && await applicationReady(product.slug, current.helmCommit) && await frontendReady(product.slug, config.PRODUCT_BASE_DOMAIN)) {
           await withTransaction(database, async (client) => {
             await client.query("UPDATE products SET status='LIVE',updated_at=now() WHERE id=$1 AND status='DEPLOYING'", [product.id]);
             await client.query("UPDATE management_commands SET status='COMPLETED',updated_at=now() WHERE product_id=$1 AND status='ACCEPTED'", [product.id]);
             await writeAudit(client, "manager-man", "product.live", product.id, current.sourceCommit,
-              { url: `https://${product.slug}.ai-products.gurkeschale.ch`, revision: current.helmCommit });
+              { url: `https://${product.slug}.${config.PRODUCT_BASE_DOMAIN}`, revision: current.helmCommit });
           });
           app.log.info({ slug: product.slug }, "product is live");
         }
@@ -114,7 +115,7 @@ async function deployRelease(payload: unknown, correlationId: string): Promise<v
   await github.verifyCommit(release.sourceRepository, release.sourceCommit);
   await verifyImage(release, config.GITHUB_TOKEN);
   const helmCommit = await publishRelease(github, release, product.slug, config.GITHUB_HELM_REPOSITORY,
-    config.GITHUB_GITOPS_REPOSITORY, config.GITHUB_OWNER, correlationId);
+    config.GITHUB_GITOPS_REPOSITORY, config.GITHUB_OWNER, correlationId, config.PRODUCT_BASE_DOMAIN);
   await withTransaction(database, async (client) => {
     await client.query(`INSERT INTO verified_releases(order_id,product_id,payload) VALUES($1,$2,$3::jsonb)
       ON CONFLICT(order_id) DO UPDATE SET payload=EXCLUDED.payload,received_at=now()`,

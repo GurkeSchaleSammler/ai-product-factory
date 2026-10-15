@@ -19,7 +19,9 @@ eine auf den Helm-Commit gepinnte Application nach
 Die Chart-Konvention ist `image.repository` mit `image.digest` (bestehende
 `repository:tag`-Templates werden bei der Übernahme angepasst) sowie
 `ingress.host` und `ingress.className`. Das Ziel ist Traefik Public mit
-cert-manager und `<slug>.ai-products.gurkeschale.ch`. Vor `LIVE` müssen Argo
+cert-manager und `<slug>.gurkeschale.ch` (konfigurierbar über
+`PRODUCT_BASE_DOMAIN`). Die flache Domain nutzt die vorhandene Cloudflare-TLS-Abdeckung;
+eine zusätzliche Subdomain-Ebene benötigt passende Edge-Zertifikate. Vor `LIVE` müssen Argo
 `Synced/Healthy`, die Sync-Operation erfolgreich und die öffentliche HTTPS-Seite
 mit Status 200 erreichbar sein. Ein fehlgeschlagenes Deployment bleibt sichtbar
 als `DEPLOYING`; dauerhafte Veröffentlichungsfehler stehen in der Queue.
