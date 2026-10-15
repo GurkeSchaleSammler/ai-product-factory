@@ -49,6 +49,7 @@ spec:
             - { name: POLL_INTERVAL_MS, value: {{ .Values.config.pollIntervalMs | quote }} }
             - { name: JOB_LEASE_SECONDS, value: {{ .Values.config.jobLeaseSeconds | quote }} }
             - { name: RUN_MIGRATIONS, value: "false" }
+            - { name: GITHUB_PRODUCT_OWNER, value: {{ .Values.config.githubProductOwner | quote }} }
             - { name: GITHUB_PIPELINE_REPOSITORY, value: {{ .Values.config.githubPipelineRepository | quote }} }
             - { name: GITHUB_PIPELINE_BRANCH, value: {{ .Values.config.githubPipelineBranch | quote }} }
             - { name: GITHUB_PRODUCT_REPOSITORIES_PRIVATE, value: {{ .Values.config.githubProductRepositoriesPrivate | quote }} }

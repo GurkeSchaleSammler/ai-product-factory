@@ -49,6 +49,7 @@ describe("GitHubWriter.createProductRepository", () => {
       helmRepository: "homelab-helm",
       gitopsRepository: "homelab-gitops",
       branch: "main",
+      productOwner: "manager-account",
       pipelineOwner: undefined,
       pipelineRepository: "empty-produkt",
       pipelineBranch: "main",

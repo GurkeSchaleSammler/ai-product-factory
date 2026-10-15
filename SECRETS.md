@@ -45,6 +45,10 @@ Secretname gemäß Standardwert: `manager-man-secrets`
 | `github-token` | Classic PAT des separaten Manager-GitHub-Kontos; wird in neue Produkt-Repositories zusätzlich als `TAMBINOS_PAT` hinterlegt |
 | `deepseek-api-key` | DeepSeek-Key für die AI-Pipes-Workflows; wird verschlüsselt als Repo-Secret `DEEPSEEK_API_KEY` gesetzt |
 
+Der durch `github-token` authentifizierte Login muss `sechssiebe67-wq` sein.
+Manager-Man prüft dies vor jeder Produkt-Repository-Erstellung und bricht bei
+einem Token eines anderen Kontos ohne Mutation ab.
+
 Image-Pull-Secret: `ghcr-manager-man` mit ausschließlich `read:packages`. Dafür
 wird nicht `github-token` wiederverwendet.
 

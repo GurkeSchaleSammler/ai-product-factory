@@ -21,6 +21,7 @@ config:
   logLevel: info
   pollIntervalMs: 2000
   jobLeaseSeconds: 300
+  githubProductOwner: sechssiebe67-wq
   githubPipelineRepository: empty-produkt
   githubPipelineBranch: main
   githubProductRepositoriesPrivate: true

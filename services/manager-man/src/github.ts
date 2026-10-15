@@ -7,6 +7,7 @@ export interface GitHubConfig {
   helmRepository: string;
   gitopsRepository: string;
   branch: string;
+  productOwner: string;
   pipelineOwner: string | undefined;
   pipelineRepository: string;
   pipelineBranch: string;
@@ -49,6 +50,9 @@ export class GitHubWriter {
 
   async createProductRepository(order: DevelopmentOrder): Promise<ProductRepositoryResult> {
     const actor = await this.#request<{ login: string }>("/user");
+    if (actor.login.toLowerCase() !== this.#config.productOwner.toLowerCase()) {
+      throw new Error(`GitHub token belongs to ${actor.login}; expected product owner ${this.#config.productOwner}`);
+    }
     const repositoryName = order.pitch.slug;
     const fullName = `${actor.login}/${repositoryName}`;
     const description = `AI Product Factory product ${order.productId}`;
