@@ -22,6 +22,7 @@ spec:
         - ipBlock: { cidr: 0.0.0.0/0 }
       ports:
         - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 6443 }
     {{- range .Values.networkPolicy.databaseCidrs }}
     - to:
         - ipBlock: { cidr: {{ . | quote }} }

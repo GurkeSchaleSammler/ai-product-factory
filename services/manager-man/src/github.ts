@@ -1,8 +1,10 @@
 import type { DevelopmentOrder, ProductPitch } from "@factory/contracts";
 import sodium from "libsodium-wrappers";
+import { readFile } from "node:fs/promises";
 
 export interface GitHubConfig {
   token: string;
+  infraToken?: string | undefined;
   owner: string;
   helmRepository: string;
   gitopsRepository: string;
@@ -86,6 +88,7 @@ export class GitHubWriter {
     if (!await this.#branchExists(repository.full_name, "main")) {
       await this.#copyPipelineBranch(repository.full_name, actor.login);
     }
+    await this.ensureReleaseWorkflow(repository.full_name);
     await Promise.all(Object.entries(this.#config.productSecrets).map(([name, value]) =>
       this.#putActionsSecret(repository.full_name, name, value)));
     await this.#setActionsEnabled(repository.full_name, true);
@@ -111,6 +114,21 @@ export class GitHubWriter {
       },
     );
     return { fullName: repository.full_name, issueNumber: issue.number, issueUrl: issue.html_url };
+  }
+
+  async ensureReleaseWorkflow(repository: string): Promise<void> {
+    const path = `/repos/${this.#repoPath(repository)}/contents/.github/workflows/factory-release.yml`;
+    try {
+      await this.#request(path);
+      return;
+    } catch (error) {
+      if (!(error instanceof GitHubHttpError) || error.status !== 404) throw error;
+    }
+    const content = await readFile(new URL("../assets/factory-release.yml", import.meta.url), "utf8");
+    await this.#request(path, { method: "PUT", body: JSON.stringify({
+      message: "ci: add reviewed multi-architecture factory releases", branch: "main",
+      content: Buffer.from(content).toString("base64"),
+    }) });
   }
 
   async #copyPipelineBranch(destination: string, authenticatedOwner: string): Promise<void> {
@@ -229,27 +247,64 @@ export class GitHubWriter {
 
   async verifyCommit(repository: string, commit: string): Promise<void> {
     const [owner, repo, extra] = repository.split("/");
-    if (!owner || !repo || extra || owner !== this.#config.owner) {
+    if (!owner || !repo || extra || owner !== this.#config.productOwner) {
       throw new Error("source repository is outside the configured GitHub owner");
     }
     await this.#request(`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${commit}`);
-    const checks = await this.#request<{ total_count: number; check_runs: Array<{ status: string; conclusion: string | null }> }>(
+    const checks = await this.#request<{ total_count: number; check_runs: Array<{ name: string; status: string; conclusion: string | null }> }>(
       `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${commit}/check-runs`,
     );
-    if (checks.total_count < 1 || checks.check_runs.some((check) => check.status !== "completed" || check.conclusion !== "success")) {
+    const ci = checks.check_runs.filter((check) => check.name.startsWith("test"));
+    if (ci.length < 1 || ci.some((check) => check.status !== "completed" || check.conclusion !== "success")) {
       throw new Error("GitHub checks are missing or not successful");
     }
-    const pulls = await this.#request<Array<{ number: number; merged_at: string | null }>>(
+    const pulls = await this.#request<Array<{ number: number; merged_at: string | null; merge_commit_sha: string; head: { sha: string } }>>(
       `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/commits/${commit}/pulls`,
     );
-    const merged = pulls.find((pull) => pull.merged_at !== null);
+    const merged = pulls.find((pull) => pull.merged_at !== null && pull.merge_commit_sha === commit);
     if (!merged) throw new Error("source commit is not associated with a merged pull request");
-    const reviews = await this.#request<Array<{ state: string }>>(
+    const reviews = await this.#request<Array<{ state: string; body: string; commit_id: string; user: { login: string } }>>(
       `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${merged.number}/reviews`,
     );
-    if (!reviews.some((review) => review.state === "APPROVED")) {
+    const latest = reviews.filter((review) => review.commit_id === merged.head.sha &&
+      review.user.login.toLowerCase() === this.#config.productOwner.toLowerCase()).at(-1);
+    if (!latest || !(latest.state === "APPROVED" || (latest.state === "COMMENTED" &&
+      latest.body.trimStart().startsWith("REVIEW_VERDICT: APPROVED\n") && latest.body.includes("<!-- ai-pipes-review -->")))) {
       throw new Error("merged pull request has no approved review");
     }
+  }
+
+  async productRequest<T>(repository: string, path: string): Promise<T> {
+    if (repository.split("/")[0]?.toLowerCase() !== this.#config.productOwner.toLowerCase()) {
+      throw new Error("product repository owner mismatch");
+    }
+    return this.#request<T>(`/repos/${this.#repoPath(repository)}${path}`);
+  }
+
+  async publishFiles(repository: string, files: Record<string, string>, correlationId: string): Promise<string> {
+    const token = this.#config.infraToken;
+    if (!token) throw new Error("GITHUB_INFRA_TOKEN is required for deployment");
+    const actor = await this.#request<{ login: string; id: number }>("/user", {}, token);
+    if (actor.login.toLowerCase() !== this.#config.owner.toLowerCase()) throw new Error("infrastructure token owner mismatch");
+    if (![this.#config.helmRepository, this.#config.gitopsRepository].includes(repository)) throw new Error("infrastructure repository not allowed");
+    const allowedPrefix = repository === this.#config.helmRepository ? "charts/ai-products/" : "applications/ai-products/";
+    if (Object.keys(files).some((path) => !path.startsWith(allowedPrefix) || path.includes(".."))) throw new Error("infrastructure path not allowed");
+    const root = `/repos/${this.#segment(this.#config.owner)}/${this.#segment(repository)}`;
+    const request = <T>(path: string, method = "GET", body?: unknown) => this.#request<T>(root + path,
+      { method, ...(body ? { body: JSON.stringify(body) } : {}) }, token);
+    const ref = await request<{ object: { sha: string } }>(`/git/ref/heads/${this.#segment(this.#config.branch)}`);
+    const parent = await request<{ tree: { sha: string } }>(`/git/commits/${ref.object.sha}`);
+    const tree = await request<{ sha: string }>("/git/trees", "POST", {
+      base_tree: parent.tree.sha,
+      tree: Object.entries(files).map(([path, content]) => ({ path, mode: "100644", type: "blob", content })),
+    });
+    if (tree.sha === parent.tree.sha) return ref.object.sha;
+    const commit = await request<{ sha: string }>("/git/commits", "POST", {
+      message: `factory(${correlationId}): publish product deployment`, tree: tree.sha, parents: [ref.object.sha],
+      author: { name: actor.login, email: `${actor.id}+${actor.login}@users.noreply.github.com` },
+    });
+    await request(`/git/refs/heads/${this.#segment(this.#config.branch)}`, "PATCH", { sha: commit.sha, force: false });
+    return commit.sha;
   }
 
   async publishProductConfiguration(input: {
@@ -290,12 +345,12 @@ export class GitHubWriter {
     });
   }
 
-  async #request<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  async #request<T = unknown>(path: string, init: RequestInit = {}, token = this.#config.token): Promise<T> {
     const response = await fetch(`https://api.github.com${path}`, {
       ...init,
       headers: {
         Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${this.#config.token}`,
+        Authorization: `Bearer ${token}`,
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
         ...init.headers,

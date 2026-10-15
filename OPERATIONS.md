@@ -1,5 +1,29 @@
 # Installation und Aktivierung
 
+## Automatische Produkt-Releases
+
+`services/manager-man/assets/factory-release.yml` wird in neue Produktrepos
+installiert und muss auch in `empty-produkt/.github/workflows/` vorhanden sein.
+Nach erfolgreicher CI auf `main` baut der Workflow die letzte gemergte
+Produktrevision für AMD64 und ARM64 und veröffentlicht einen GitHub-Release
+`factory-<commit>` mit einem JSON-Manifest im Release-Text. Voraussetzung sind
+ein Dockerfile und genau ein Chart unter `deploy/helm/*/Chart.yaml`.
+
+Manager-Man prüft alle 60 Sekunden die Produkt-Releases. Er verifiziert CI,
+den commitgebundenen Review-Verdict des Manager-Kontos sowie Registry-Digest,
+ARM64-Unterstützung und Image-Quellrevision. Anschließend kopiert er den
+vollständigen Chart nach `homelab-helm/charts/ai-products/<slug>` und schreibt
+eine auf den Helm-Commit gepinnte Application nach
+`homelab-gitops/applications/ai-products/<slug>.yaml`.
+
+Die Chart-Konvention ist `image.repository` mit `image.digest` (bestehende
+`repository:tag`-Templates werden bei der Übernahme angepasst) sowie
+`ingress.host` und `ingress.className`. Das Ziel ist Traefik Public mit
+cert-manager und `<slug>.ai-products.gurkeschale.ch`. Vor `LIVE` müssen Argo
+`Synced/Healthy`, die Sync-Operation erfolgreich und die öffentliche HTTPS-Seite
+mit Status 200 erreichbar sein. Ein fehlgeschlagenes Deployment bleibt sichtbar
+als `DEPLOYING`; dauerhafte Veröffentlichungsfehler stehen in der Queue.
+
 ## Voraussetzungen
 
 - Kubernetes mit Unterstützung für `batch/v1` CronJobs und NetworkPolicies

@@ -18,7 +18,7 @@ spec:
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
       serviceAccountName: {{ include "manager-man.fullname" . }}
-      automountServiceAccountToken: false
+      automountServiceAccountToken: true
       securityContext:
         runAsNonRoot: true
         seccompProfile:
@@ -45,6 +45,9 @@ spec:
             - name: DEEPSEEK_API_KEY
               valueFrom:
                 secretKeyRef: { name: {{ .Values.existingSecret }}, key: {{ .Values.secretKeys.deepseekApiKey }} }
+            - name: GITHUB_INFRA_TOKEN
+              valueFrom:
+                secretKeyRef: { name: {{ .Values.existingSecret }}, key: infra-github-token }
             - { name: LOG_LEVEL, value: {{ .Values.config.logLevel | quote }} }
             - { name: POLL_INTERVAL_MS, value: {{ .Values.config.pollIntervalMs | quote }} }
             - { name: JOB_LEASE_SECONDS, value: {{ .Values.config.jobLeaseSeconds | quote }} }

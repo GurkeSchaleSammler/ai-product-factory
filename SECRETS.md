@@ -44,6 +44,7 @@ Secretname gemäß Standardwert: `manager-man-secrets`
 | `database-url` | PostgreSQL-URL für die Laufzeitrolle `manager_man` |
 | `github-token` | Classic PAT des separaten Manager-GitHub-Kontos; wird in neue Produkt-Repositories zusätzlich als `TAMBINOS_PAT` hinterlegt |
 | `deepseek-api-key` | DeepSeek-Key für die AI-Pipes-Workflows; wird verschlüsselt als Repo-Secret `DEEPSEEK_API_KEY` gesetzt |
+| `infra-github-token` | Separater Token von `GurkeSchaleSammler` mit Schreibrechten auf `homelab-helm` und `homelab-gitops`. Wird niemals an Produkt-Repositories weitergegeben. |
 
 Der durch `github-token` authentifizierte Login muss `sechssiebe67-wq` sein.
 Manager-Man prüft dies vor jeder Produkt-Repository-Erstellung und bricht bei
@@ -75,6 +76,11 @@ Rechte gibst, sollte der im Cluster gespeicherte Token trotzdem auf diese
 minimalen Berechtigungen begrenzt werden.
 
 Das GitHub-Passwort wird niemals als Secret hinterlegt.
+
+Für private Produktimages wird `ghcr-product-images` im Namespace
+`ai-product-factory` als Registry-Secret benötigt. Der Sync-Hook jedes
+Produkt-Charts kopiert ausschließlich dieses Secret in seinen eigenen
+Produktnamespace. Der Manager erhält nur lesenden Zugriff auf Argo-Applications.
 
 ## Beispiel für eine lokale Testinstallation
 

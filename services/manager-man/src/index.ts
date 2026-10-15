@@ -10,6 +10,7 @@ import {
   claimJob,
   completeJob,
   createDatabase,
+  deferJob,
   failJob,
   getFactorySettings,
   migrateDatabase,
@@ -22,6 +23,8 @@ import Fastify from "fastify";
 import { z } from "zod";
 import { GitHubWriter } from "./github.js";
 import { evaluatePolicy, type Incumbent } from "./policy.js";
+import { discoverRelease, publishRelease, validateRelease, verifyImage } from "./release.js";
+import { applicationReady, frontendReady } from "./cluster.js";
 
 const configSchema = z.object({
   DATABASE_URL: z.string().min(1),
@@ -31,6 +34,8 @@ const configSchema = z.object({
   JOB_LEASE_SECONDS: z.coerce.number().int().min(30).default(300),
   RUN_MIGRATIONS: z.enum(["true", "false"]).default("false").transform((value) => value === "true"),
   GITHUB_TOKEN: z.string().min(20),
+  GITHUB_INFRA_TOKEN: z.string().min(20).optional(),
+  RELEASE_POLL_INTERVAL_MS: z.coerce.number().int().min(10_000).default(60_000),
   DEEPSEEK_API_KEY: z.string().min(1),
   GITHUB_PRODUCT_OWNER: z.string().min(1).default("sechssiebe67-wq"),
   GITHUB_PIPELINE_OWNER: z.string().min(1).optional(),
@@ -50,6 +55,7 @@ const workerId = `manager-man:${hostname()}:${process.pid}`;
 const controller = new AbortController();
 const github = new GitHubWriter({
   token: config.GITHUB_TOKEN,
+  infraToken: config.GITHUB_INFRA_TOKEN,
   owner: config.GITHUB_OWNER,
   helmRepository: config.GITHUB_HELM_REPOSITORY,
   gitopsRepository: config.GITHUB_GITOPS_REPOSITORY,
@@ -64,6 +70,60 @@ const github = new GitHubWriter({
     DEEPSEEK_API_KEY: config.DEEPSEEK_API_KEY,
   },
 });
+
+async function pollReleases(): Promise<void> {
+  const settings = await getFactorySettings(database);
+  if (!settings.automationEnabled || settings.emergencyStop) return;
+  const { rows } = await database.query<{ id: string; slug: string; status: string }>(
+    "SELECT id,slug,status FROM products WHERE status IN ('BUILDING','REVIEWING','DEPLOYING','LIVE')");
+  for (const product of rows) {
+    try {
+      const repository = `${config.GITHUB_PRODUCT_OWNER}/${product.slug}`;
+      await github.ensureReleaseWorkflow(repository);
+      const release = await discoverRelease(github, repository);
+      if (release) {
+        await database.query(`INSERT INTO jobs(kind,payload,idempotency_key)
+          VALUES ('deploy_release',$1::jsonb,$2) ON CONFLICT (idempotency_key) DO NOTHING`,
+        [JSON.stringify({ productId: product.id, release }), `release:${product.id}:${release.sourceCommit}`]);
+      }
+      if (product.status === "DEPLOYING") {
+        const stored = await database.query<{ payload: { helmCommit?: string; sourceCommit: string } }>(
+          "SELECT payload FROM verified_releases WHERE product_id=$1 ORDER BY received_at DESC LIMIT 1", [product.id]);
+        const current = stored.rows[0]?.payload;
+        if (current?.helmCommit && await applicationReady(product.slug, current.helmCommit) && await frontendReady(product.slug)) {
+          await withTransaction(database, async (client) => {
+            await client.query("UPDATE products SET status='LIVE',updated_at=now() WHERE id=$1 AND status='DEPLOYING'", [product.id]);
+            await client.query("UPDATE management_commands SET status='COMPLETED',updated_at=now() WHERE product_id=$1 AND status='ACCEPTED'", [product.id]);
+            await writeAudit(client, "manager-man", "product.live", product.id, current.sourceCommit,
+              { url: `https://${product.slug}.ai-products.gurkeschale.ch`, revision: current.helmCommit });
+          });
+          app.log.info({ slug: product.slug }, "product is live");
+        }
+      }
+    } catch (error) { app.log.warn({ err: error, slug: product.slug }, "release reconciliation will retry"); }
+  }
+}
+
+async function deployRelease(payload: unknown, correlationId: string): Promise<void> {
+  const input = z.object({ productId: z.string().uuid(), release: z.unknown() }).parse(payload);
+  const { rows } = await database.query<{ slug: string; order_id: string }>(
+    `SELECT p.slug,o.id AS order_id FROM products p JOIN development_orders o ON o.product_id=p.id WHERE p.id=$1`, [input.productId]);
+  const product = rows[0];
+  if (!product) throw new Error("release product has no development order");
+  const release = validateRelease(input.release, `${config.GITHUB_PRODUCT_OWNER}/${product.slug}`);
+  await github.verifyCommit(release.sourceRepository, release.sourceCommit);
+  await verifyImage(release, config.GITHUB_TOKEN);
+  const helmCommit = await publishRelease(github, release, product.slug, config.GITHUB_HELM_REPOSITORY,
+    config.GITHUB_GITOPS_REPOSITORY, config.GITHUB_OWNER, correlationId);
+  await withTransaction(database, async (client) => {
+    await client.query(`INSERT INTO verified_releases(order_id,product_id,payload) VALUES($1,$2,$3::jsonb)
+      ON CONFLICT(order_id) DO UPDATE SET payload=EXCLUDED.payload,received_at=now()`,
+    [product.order_id, input.productId, JSON.stringify({ ...release, helmCommit })]);
+    await client.query("UPDATE products SET status='DEPLOYING',has_persistent_data=true,updated_at=now() WHERE id=$1", [input.productId]);
+    await writeAudit(client,"manager-man","release.published",input.productId,correlationId,{...release,helmCommit});
+  });
+  app.log.info({ slug: product.slug, helmCommit }, "product deployment published");
+}
 
 app.get("/health/live", async () => ({ status: "ok" }));
 app.get("/health/ready", async (_request, reply) => {
@@ -222,12 +282,20 @@ async function dispatchDevelopmentOrder(jobPayload: unknown, correlationId: stri
 async function processNextJob(): Promise<boolean> {
   const job = await claimJob(
     database,
-    ["evaluate_decision", "dispatch_development_order"],
+    ["evaluate_decision", "dispatch_development_order", "deploy_release"],
     workerId,
     config.JOB_LEASE_SECONDS,
   );
   if (!job) return false;
   try {
+    if (job.kind === "deploy_release") {
+      const settings = await getFactorySettings(database);
+      if (!settings.automationEnabled || settings.emergencyStop) {
+        await deferJob(database, job.id, workerId, 60, "deployment blocked by factory settings");
+        return true;
+      }
+      await deployRelease(job.payload, job.id);
+    }
     if (job.kind === "evaluate_decision") await evaluateDecisionJob(job.payload, job.id);
     if (job.kind === "dispatch_development_order") await dispatchDevelopmentOrder(job.payload, job.id);
     await completeJob(database, job.id, workerId);
@@ -239,7 +307,12 @@ async function processNextJob(): Promise<boolean> {
 }
 
 async function workerLoop(): Promise<void> {
+  let nextReleasePoll = 0;
   while (!controller.signal.aborted) {
+    if (Date.now() >= nextReleasePoll) {
+      nextReleasePoll = Date.now() + config.RELEASE_POLL_INTERVAL_MS;
+      await pollReleases().catch((error: unknown) => app.log.warn({ err: error }, "release polling will retry"));
+    }
     const processed = await processNextJob();
     if (!processed) await wait(config.POLL_INTERVAL_MS, controller.signal);
   }

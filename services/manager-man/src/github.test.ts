@@ -31,6 +31,7 @@ describe("GitHubWriter.createProductRepository", () => {
         });
       }
       if (url.endsWith("/branches/main")) return json({ name: "main" });
+      if (url.endsWith("/contents/.github/workflows/factory-release.yml")) return json({ sha: "existing-workflow" });
       if (url.endsWith("/actions/secrets/public-key")) return json({ key_id: "key-1", key: publicKey });
       if (url.includes("/actions/secrets/")) return new Response(null, { status: 204 });
       if (url.endsWith("/actions/permissions")) return new Response(null, { status: 204 });
