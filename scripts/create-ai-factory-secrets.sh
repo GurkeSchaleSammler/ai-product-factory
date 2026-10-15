@@ -43,10 +43,12 @@ k -n "$NS" create secret generic sales-man-secrets \
 
 k -n "$NS" get secret manager-man-secrets -o jsonpath='{.data.database-url}' | base64 -d > "$secret_dir/manager-database-url"
 prompt_secret "Manager GitHub classic PAT" "$secret_dir/github-token"
+prompt_secret "GurkeSchaleSammler infrastructure token (Helm/GitOps write)" "$secret_dir/infra-github-token"
 prompt_secret "DeepSeek API key for product repositories" "$secret_dir/deepseek-api-key"
 k -n "$NS" create secret generic manager-man-secrets \
   --from-file=database-url="$secret_dir/manager-database-url" \
   --from-file=github-token="$secret_dir/github-token" \
+  --from-file=infra-github-token="$secret_dir/infra-github-token" \
   --from-file=deepseek-api-key="$secret_dir/deepseek-api-key" \
   --dry-run=client -o yaml | k apply -f -
 
@@ -62,6 +64,15 @@ for secret_name in ghcr-innovation-man ghcr-sales-man ghcr-manager-man; do
 done
 unset ghcr_token ghcr_username
 
+prompt_secret "Product GHCR token for sechssiebe67-wq (read:packages)" "$secret_dir/product-ghcr-token"
+product_ghcr_token="$(<"$secret_dir/product-ghcr-token")"
+k -n "$NS" create secret docker-registry ghcr-product-images \
+  --docker-server=ghcr.io \
+  --docker-username=sechssiebe67-wq \
+  --docker-password="$product_ghcr_token" \
+  --dry-run=client -o yaml | k apply -f -
+unset product_ghcr_token
+
 echo
 echo "Created secrets:"
 k -n "$NS" get secret \
@@ -72,6 +83,7 @@ k -n "$NS" get secret \
   ghcr-innovation-man \
   ghcr-sales-man \
   ghcr-manager-man \
+  ghcr-product-images \
   -o custom-columns=NAME:.metadata.name,TYPE:.type --no-headers
 
 echo
