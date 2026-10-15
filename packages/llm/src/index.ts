@@ -1,6 +1,29 @@
 import OpenAI from "openai";
 import { z, type ZodType } from "zod";
 
+export function normalizeLlmStringList(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    try {
+      const parsed: unknown = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // Fall through and preserve the text as one or more list entries.
+    }
+  }
+
+  const entries = trimmed
+    .split(/\r?\n|\s*;\s*/)
+    .map((entry) => entry.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean);
+
+  return entries.length > 0 ? entries : [trimmed];
+}
+
 const llmConfigSchema = z.object({
   LLM_API_KEY: z.string().min(1),
   LLM_BASE_URL: z.string().url().default("https://api.deepseek.com"),

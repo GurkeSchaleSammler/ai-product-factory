@@ -14,7 +14,7 @@ import {
   withTransaction,
   writeAudit,
 } from "@factory/database";
-import { JsonLlm, readLlmConfig } from "@factory/llm";
+import { JsonLlm, normalizeLlmStringList, readLlmConfig } from "@factory/llm";
 import Fastify from "fastify";
 import { z } from "zod";
 
@@ -30,6 +30,19 @@ const decisionBodySchema = portfolioDecisionSchema.omit({
   id: true,
   pitchId: true,
   portfolioRevision: true,
+}).extend({
+  rationale: z.preprocess(
+    normalizeLlmStringList,
+    z.array(z.string().min(1)).min(1),
+  ),
+  risks: z.preprocess(
+    normalizeLlmStringList,
+    z.array(z.string().min(1)),
+  ),
+  evidenceIds: z.preprocess(
+    normalizeLlmStringList,
+    z.array(z.string().min(1)),
+  ),
 });
 const config = configSchema.parse(process.env);
 const llmConfig = readLlmConfig();
@@ -45,9 +58,12 @@ Erfinde keine Evidenz. Harte Ausschlussregeln überstimmen den Score.
 Empfehlungen: ADMIT, BACKLOG, REJECT oder REPLACE.
 Neuaufnahme: mindestens 70 Punkte. Ersatz: Kandidat mindestens 75 Punkte,
 mindestens 15 Punkte Vorsprung und zwei unabhängige Evidenzgruppen.
-Benötigte Felder: score, recommendation, rationale, risks, evidenceIds und
-bei REPLACE replacement mit productId, incumbentScore, hasRealUsers,
-hasPersistentData und optional humanApprovalId.`;
+Das JSON muss exakt diese Typen verwenden: score ist eine Ganzzahl von 0 bis
+100; recommendation ist ADMIT, BACKLOG, REJECT oder REPLACE; rationale, risks
+und evidenceIds sind immer Arrays aus Strings, niemals einzelne Strings.
+Nur bei REPLACE kommt replacement hinzu, mit productId als UUID,
+incumbentScore als Ganzzahl, hasRealUsers und hasPersistentData als Boolean
+sowie optional humanApprovalId als String.`;
 
 app.get("/health/live", async () => ({ status: "ok" }));
 app.get("/health/ready", async (_request, reply) => {
