@@ -234,7 +234,14 @@ export class GitHubWriter {
       `## Revenue hypothesis\n\n${pitch.revenueHypothesis}\n\n` +
       `## Risks\n\n${bullets(pitch.risks)}\n\n` +
       `## Validation plan\n\n${pitch.validationPlan}\n\n` +
-      `## Evidence\n\n${evidence}`;
+      `## Evidence\n\n${evidence}\n\n` +
+      `## Factory deployment contract\n\n` +
+      `Deliver a runnable Dockerfile (linux/amd64 and linux/arm64) exposing HTTP on port 8080, with GET /healthz. ` +
+      `Include exactly one complete Helm chart under deploy/helm/<chart-name>/. ` +
+      `Use image.repository and image.digest to render repository@digest; configure ingress via ingress.enabled, ingress.host and ingress.className. ` +
+      `Include resource requests/limits, non-root execution and persistent storage where required. ` +
+      `Keep .github/workflows/factory-release.yml: it builds reviewed merges and publishes the image manifest. ` +
+      `The Factory manager publishes the chart to the infrastructure repositories; product workflows do not receive infrastructure credentials.`;
   }
 
   #repoPath(repository: string): string {
