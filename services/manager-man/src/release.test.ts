@@ -28,6 +28,11 @@ spec:
     expect(() => adaptChartFile("deployment.yaml", "kind: Deployment\nimage: arbitrary:latest", "pilot")).toThrow();
   });
 
+  it("creates PVCs in the workload wave so WaitForFirstConsumer cannot block the sync hook", () => {
+    const result = adaptChartFile("templates/pvc.yaml", "kind: PersistentVolumeClaim\nmetadata:\n  name: data\nspec: {}", "pilot");
+    expect(result).toContain('argocd.argoproj.io/sync-wave: "2"');
+  });
+
   it("publishes the complete chart before the pinned Argo application", async () => {
     const files = { "Chart.yaml": "name: pilot\nversion: 0.1.0\n", "values.yaml": "image: {}\n" };
     const publishFiles = vi.fn().mockResolvedValueOnce("c".repeat(40)).mockResolvedValueOnce("d".repeat(40));

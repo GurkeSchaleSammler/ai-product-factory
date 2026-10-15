@@ -57,8 +57,10 @@ export function adaptChartFile(path: string, content: string, slug: string, doma
   if (path.endsWith(".yaml") || path.endsWith(".yml")) {
     content = content.replace(/\.Values\.image\.repository\s*}}:\s*{{\s*\.Values\.image\.tag/g,
       ".Values.image.repository }}@{{ .Values.image.digest");
-    if (/kind:\s*(Deployment|StatefulSet)/.test(content)) {
+    if (/kind:\s*(Deployment|StatefulSet|PersistentVolumeClaim)/.test(content)) {
       content = content.replace(/(metadata:\r?\n)/, '$1  annotations:\n    argocd.argoproj.io/sync-wave: "2"\n');
+    }
+    if (/kind:\s*(Deployment|StatefulSet)/.test(content)) {
       if (!content.includes(".Values.image.digest")) throw new Error(`chart must support image.digest: ${path}`);
       if (!content.includes("imagePullSecrets:")) content = content.replace(/(    spec:\r?\n)/,
         "$1      automountServiceAccountToken: false\n      imagePullSecrets:\n        - name: ghcr-product-images\n");
