@@ -33,6 +33,7 @@ interface GitHubRepository {
   name: string;
   full_name: string;
   description: string | null;
+  private?: boolean;
   owner: { login: string };
 }
 
@@ -83,6 +84,7 @@ export class GitHubWriter {
       });
     }
 
+    if (repository.private) await this.#publishRepository(repository.full_name);
     await this.#setActionsEnabled(repository.full_name, false);
     if (!await this.#branchExists(repository.full_name, "main")) {
       await this.#copyPipelineBranch(repository.full_name, actor.login);
@@ -114,6 +116,32 @@ export class GitHubWriter {
       },
     );
     return { fullName: repository.full_name, issueNumber: issue.number, issueUrl: issue.html_url };
+  }
+
+  async publishExistingProductRepositories(): Promise<string[]> {
+    const published: string[] = [];
+    for (let page = 1; ; page += 1) {
+      const repositories = await this.#request<GitHubRepository[]>(
+        `/user/repos?affiliation=owner&visibility=all&per_page=100&page=${page}`,
+      );
+      for (const repository of repositories) {
+        if (repository.owner.login.toLowerCase() !== this.#config.productOwner.toLowerCase()
+          || !/^AI Product Factory product [0-9a-f-]{36}$/i.test(repository.description ?? "")) continue;
+        if (repository.private) {
+          await this.#publishRepository(repository.full_name);
+          published.push(repository.full_name);
+        }
+        await this.ensureProductLicense(repository.full_name, repository.owner.login);
+      }
+      if (repositories.length < 100) return published;
+    }
+  }
+
+  async #publishRepository(repository: string): Promise<void> {
+    await this.#request(`/repos/${this.#repoPath(repository)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ private: false }),
+    });
   }
 
   async ensureProductLicense(repository: string, owner: string): Promise<void> {

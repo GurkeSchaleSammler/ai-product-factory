@@ -125,6 +125,8 @@ deaktiviert. Markdown beschreibt die Regeln; es setzt keine Berechtigungen durch
 
 Neue Produkt-Repositories werden immer öffentlich erstellt. Eine vorhandene
 Template-Lizenz bleibt erhalten; ohne Lizenz ergänzt Manager-Man eine MIT-Lizenz.
-Bestehende private Repositories werden nicht automatisch veröffentlicht.
+Bestehende private Factory-Produkt-Repositories unter dem Manager-Konto werden
+bei der periodischen Abstimmung ebenfalls veröffentlicht und erhalten bei Bedarf
+eine MIT-Lizenz. Eigentümer und Factory-Markierung müssen übereinstimmen.
 Standard-GitHub-hosted Runner sind für öffentliche Repositories kostenlos;
 die parallelen Actions-Jobs unterliegen dem kontoweiten GitHub-Planlimit.

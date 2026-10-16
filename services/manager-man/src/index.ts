@@ -73,6 +73,11 @@ const github = new GitHubWriter({
 async function pollReleases(): Promise<void> {
   const settings = await getFactorySettings(database);
   if (!settings.automationEnabled || settings.emergencyStop) return;
+  const published = await github.publishExistingProductRepositories();
+  for (const repository of published) {
+    await writeAudit(database, "manager-man", "repository.published", null, null, { repository });
+    app.log.info({ repository }, "existing product repository is now public");
+  }
   const { rows } = await database.query<{ id: string; slug: string; status: string }>(
     "SELECT id,slug,status FROM products WHERE status IN ('BUILDING','REVIEWING','DEPLOYING','LIVE')");
   for (const product of rows) {

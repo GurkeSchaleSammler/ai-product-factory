@@ -144,3 +144,31 @@ describe("GitHubWriter.ensureProductLicense", () => {
     expect(license).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
   });
 });
+
+
+describe("GitHubWriter.publishExistingProductRepositories", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("publishes only private factory products owned by the manager", async () => {
+    const patched: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: unknown, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/user/repos?")) return json([
+        { full_name: "manager/private-product", private: true, owner: { login: "manager" }, description: `AI Product Factory product ${productId}` },
+        { full_name: "manager/public-product", private: false, owner: { login: "manager" }, description: `AI Product Factory product ${productId}` },
+        { full_name: "manager/empty-produkt", private: true, owner: { login: "manager" }, description: "Template" },
+        { full_name: "other/private-product", private: true, owner: { login: "other" }, description: `AI Product Factory product ${productId}` },
+      ]);
+      if (init?.method === "PATCH") {
+        expect(JSON.parse(String(init.body))).toEqual({ private: false });
+        patched.push(url);
+        return json({});
+      }
+      if (url.endsWith("/contents/LICENSE")) return json({ sha: "license" });
+      throw new Error(`unexpected request: ${url}`);
+    }));
+    const writer = new GitHubWriter({ productOwner: "manager" } as GitHubConfig);
+    expect(await writer.publishExistingProductRepositories()).toEqual(["manager/private-product"]);
+    expect(patched).toEqual(["https://api.github.com/repos/manager/private-product"]);
+  });
+});

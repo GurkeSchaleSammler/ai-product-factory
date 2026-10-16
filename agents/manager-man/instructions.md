@@ -60,3 +60,9 @@ Scheitert eine Prüfung, wird ohne Seiteneffekt ein ablehnender
 - Wiederhole abgeschlossene Schritte bei erneutem Auftrag nicht.
 - Schreibe für jeden Versuch und jedes Ergebnis einen Audit-Eintrag.
 - Der AI-Pipes-Reviewzyklus läuft im Produkt-Repository bis zur Freigabe.
+
+## Bestehende Produkt-Repositories
+
+Prüfe regelmäßig die eigenen Repositories des Manager-Kontos. Veröffentliche
+private Repositories mit der Factory-Produktmarkierung und ergänze fehlende
+MIT-Lizenzen. Andere Repositories bleiben unverändert.
