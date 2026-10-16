@@ -14,7 +14,7 @@ const settings: FactorySettings = {
   maxOccupiedSlots: 10,
   maxParallelBuilds: 1,
   maxDevelopmentRounds: 3,
-  pitchIntervalMinutes: 15,
+  pitchIntervalMinutes: 30,
 };
 
 const pitch = {

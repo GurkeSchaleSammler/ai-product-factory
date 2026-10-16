@@ -10,7 +10,7 @@ Agenten tauschen keine ungesicherten Direktaufrufe aus. PostgreSQL hält den
 Workflowzustand und eine transaktionale Job-/Outbox-Tabelle.
 
 ```text
-Innovation-Man (CronJob, alle 15 Minuten)
+Innovation-Man (CronJob, alle 30 Minuten)
         │ ProductPitch
         ▼
 PostgreSQL: Workflowzustand, Jobs, Outbox, Audit
@@ -79,8 +79,8 @@ Die drei Argo-Anwendungen liegen in
 ### 1. Innovation-Man
 
 Das Chart installiert einen Kubernetes-`CronJob` mit dem Zeitplan
-`*/15 * * * *`, `concurrencyPolicy: Forbid` und einer begrenzten Laufzeit. Der
-Prozess berechnet aus UTC-Zeit eine eindeutige 15-Minuten-Fenster-ID. Auf der
+`*/30 * * * *`, `concurrencyPolicy: Forbid` und einer begrenzten Laufzeit. Der
+Prozess berechnet aus UTC-Zeit eine eindeutige 30-Minuten-Fenster-ID. Auf der
 Datenbank liegt ein Unique Constraint für diese ID.
 
 In einer Transaktion werden der `ProductPitch`, ein Job für Sales-Man und der
@@ -166,7 +166,7 @@ sauber und schreiben strukturierte JSON-Logs ohne Secretwerte.
 
 1. Zod-Contracts und Zustandsmaschine festlegen.
 2. PostgreSQL-Migrationen, Job-Leases, Outbox und Audit implementieren.
-3. Innovation-Man als 15-Minuten-CronJob implementieren.
+3. Innovation-Man als 30-Minuten-CronJob implementieren.
 4. Sales-Man als idempotenten Worker implementieren.
 5. Policy Engine und Manager-Man ohne externe Schreibzugänge testen.
 6. Drei Images bauen, signieren und per Digest referenzieren.

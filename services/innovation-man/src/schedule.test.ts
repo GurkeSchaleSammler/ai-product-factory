@@ -13,3 +13,9 @@ it("preserves the normal fifteen minute windows", () => {
   expect(currentWindowId(15, now)).not.toBe(currentWindowId(15, now + 15 * 60_000));
   expect(() => currentWindowId(0, now)).toThrow();
 });
+
+it("supports the cost-saving thirty minute windows", () => {
+  const now = Date.UTC(2026, 9, 15, 20, 0);
+  expect(currentWindowId(30, now)).toBe(currentWindowId(30, now + 29 * 60_000));
+  expect(currentWindowId(30, now)).not.toBe(currentWindowId(30, now + 30 * 60_000));
+});

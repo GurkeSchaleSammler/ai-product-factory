@@ -5,7 +5,8 @@ image:
 imagePullSecrets:
   - name: ghcr-innovation-man
 
-schedule: "*/15 * * * *"
+schedule: "*/30 * * * *"
+suspend: false
 timeZone: Europe/Zurich
 existingSecret: innovation-man-secrets
 secretKeys:

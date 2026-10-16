@@ -113,6 +113,7 @@ UPDATE factory_settings
 SET daily_llm_cost_limit_chf = 5.00,
     daily_token_limit = 100000,
     build_timeout_seconds = 1800,
+    pitch_interval_minutes = 30,
     emergency_stop = false,
     automation_enabled = true,
     updated_at = now()
@@ -124,12 +125,9 @@ Healthchecks müssen funktionieren, bevor `automation_enabled` gesetzt wird.
 
 ## Not-Aus
 
-Für einen zeitweiligen Test kann ausschließlich das tägliche LLM-Budgetlimit
-mit `UPDATE factory_settings SET llm_budget_limits_enabled=false WHERE singleton=true;`
-ausgeschaltet werden. Die Nutzung wird weiter gezählt; Not-Aus, Build- und
-Portfolio-Grenzen gelten weiter. `true` aktiviert die zuvor gesetzten
-Kosten- und Tokenlimits wieder. Das Pitchintervall erlaubt `1` oder `15`
-Minuten; CronJob-Schedule und `pitch_interval_minutes` gemeinsam umstellen.
+Die täglichen LLM-Kosten- und Tokenlimits bleiben im Normalbetrieb aktiviert.
+Das Pitchintervall ist auf 30 Minuten festgesetzt; CronJob-Schedule und
+`pitch_interval_minutes` müssen beide auf 30 Minuten bleiben.
 
 ```sql
 UPDATE factory_settings
@@ -141,3 +139,9 @@ WHERE singleton = true;
 
 Der Not-Aus verhindert neue Arbeit. Bereits veröffentlichte Produkte bleiben
 online.
+
+Wenn die Datenbank nicht erreichbar ist, kann derselbe Zustand rein über GitOps
+erzwungen werden: `innovation-man.suspend=true` sowie `sales-man.replicaCount=0`
+und `manager-man.replicaCount=0`. Dadurch entstehen keine neuen Agent-Pods und
+der Zustand bleibt nach einem Argo-CD-Self-Heal erhalten. Zum Wiederanlauf erst
+die Datenbankeinstellung prüfen, dann die drei Werte zurücksetzen.
