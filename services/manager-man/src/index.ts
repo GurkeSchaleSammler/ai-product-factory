@@ -42,7 +42,6 @@ const configSchema = z.object({
   GITHUB_PIPELINE_OWNER: z.string().min(1).optional(),
   GITHUB_PIPELINE_REPOSITORY: z.string().min(1).default("empty-produkt"),
   GITHUB_PIPELINE_BRANCH: z.string().min(1).default("main"),
-  GITHUB_PRODUCT_REPOSITORIES_PRIVATE: z.enum(["true", "false"]).default("true").transform((value) => value === "true"),
   GITHUB_OWNER: z.string().min(1),
   GITHUB_HELM_REPOSITORY: z.string().min(1).default("homelab-helm"),
   GITHUB_GITOPS_REPOSITORY: z.string().min(1).default("homelab-gitops"),
@@ -65,7 +64,6 @@ const github = new GitHubWriter({
   pipelineOwner: config.GITHUB_PIPELINE_OWNER,
   pipelineRepository: config.GITHUB_PIPELINE_REPOSITORY,
   pipelineBranch: config.GITHUB_PIPELINE_BRANCH,
-  productRepositoriesPrivate: config.GITHUB_PRODUCT_REPOSITORIES_PRIVATE,
   productSecrets: {
     TAMBINOS_PAT: config.GITHUB_TOKEN,
     DEEPSEEK_API_KEY: config.DEEPSEEK_API_KEY,

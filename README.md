@@ -120,3 +120,11 @@ Jede Mutation benötigt einen genehmigten Auftrag, die erwartete Revision,
 einen Idempotenzschlüssel und einen Audit-Eintrag. Force Push ist verboten.
 Die Automation bleibt bis zur technischen Implementierung und Konfiguration
 deaktiviert. Markdown beschreibt die Regeln; es setzt keine Berechtigungen durch.
+
+## Öffentliche Open-Source-Produkte
+
+Neue Produkt-Repositories werden immer öffentlich erstellt. Eine vorhandene
+Template-Lizenz bleibt erhalten; ohne Lizenz ergänzt Manager-Man eine MIT-Lizenz.
+Bestehende private Repositories werden nicht automatisch veröffentlicht.
+Standard-GitHub-hosted Runner sind für öffentliche Repositories kostenlos;
+die parallelen Actions-Jobs unterliegen dem kontoweiten GitHub-Planlimit.

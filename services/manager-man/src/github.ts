@@ -13,7 +13,6 @@ export interface GitHubConfig {
   pipelineOwner: string | undefined;
   pipelineRepository: string;
   pipelineBranch: string;
-  productRepositoriesPrivate: boolean;
   productSecrets: Record<string, string>;
 }
 
@@ -71,7 +70,7 @@ export class GitHubWriter {
         body: JSON.stringify({
           name: repositoryName,
           description,
-          private: this.#config.productRepositoriesPrivate,
+          private: false,
           auto_init: false,
           has_issues: true,
           has_projects: false,
@@ -89,6 +88,7 @@ export class GitHubWriter {
       await this.#copyPipelineBranch(repository.full_name, actor.login);
     }
     await this.ensureReleaseWorkflow(repository.full_name);
+    await this.ensureProductLicense(repository.full_name, actor.login);
     await Promise.all(Object.entries(this.#config.productSecrets).map(([name, value]) =>
       this.#putActionsSecret(repository.full_name, name, value)));
     await this.#setActionsEnabled(repository.full_name, true);
@@ -114,6 +114,46 @@ export class GitHubWriter {
       },
     );
     return { fullName: repository.full_name, issueNumber: issue.number, issueUrl: issue.html_url };
+  }
+
+  async ensureProductLicense(repository: string, owner: string): Promise<void> {
+    for (const filename of ["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING", "COPYING.md"]) {
+      try {
+        await this.#request(`/repos/${this.#repoPath(repository)}/contents/${filename}`);
+        return;
+      } catch (error) {
+        if (!(error instanceof GitHubHttpError) || error.status !== 404) throw error;
+      }
+    }
+    const content = `MIT License
+
+Copyright (c) ${new Date().getUTCFullYear()} ${owner}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+`;
+    await this.#request(`/repos/${this.#repoPath(repository)}/contents/LICENSE`, {
+      method: "PUT",
+      body: JSON.stringify({
+        message: "docs: license product under MIT", branch: "main",
+        content: Buffer.from(content).toString("base64"),
+      }),
+    });
   }
 
   async ensureReleaseWorkflow(repository: string): Promise<void> {

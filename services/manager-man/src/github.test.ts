@@ -12,7 +12,7 @@ function json(body: unknown, status = 200): Response {
 describe("GitHubWriter.createProductRepository", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("configures the product repo and creates one pitch issue", async () => {
+  it.each([false, true])("configures a public product repo (new=%s) and creates one pitch issue", async (newRepository) => {
     await sodium.ready;
     const publicKey = sodium.to_base64(sodium.crypto_box_keypair().publicKey, sodium.base64_variants.ORIGINAL);
     const requests: Array<{ url: string; method: string; body: Record<string, unknown> | undefined }> = [];
@@ -22,7 +22,12 @@ describe("GitHubWriter.createProductRepository", () => {
       const body = typeof init?.body === "string" ? JSON.parse(init.body) as Record<string, unknown> : undefined;
       requests.push({ url, method, body });
       if (url.endsWith("/user")) return json({ login: "manager-account" });
+      if (url.endsWith("/user/repos") && method === "POST") return json({
+        name: "test-product", full_name: "manager-account/test-product",
+        description: `AI Product Factory product ${productId}`, owner: { login: "manager-account" },
+      }, 201);
       if (url.endsWith("/repos/manager-account/test-product")) {
+        if (newRepository) return json({ message: "Not Found" }, 404);
         return json({
           name: "test-product",
           full_name: "manager-account/test-product",
@@ -32,6 +37,7 @@ describe("GitHubWriter.createProductRepository", () => {
       }
       if (url.endsWith("/branches/main")) return json({ name: "main" });
       if (url.endsWith("/contents/.github/workflows/factory-release.yml")) return json({ sha: "existing-workflow" });
+      if (url.endsWith("/contents/LICENSE")) return json({ sha: "existing-license" });
       if (url.endsWith("/actions/secrets/public-key")) return json({ key_id: "key-1", key: publicKey });
       if (url.includes("/actions/secrets/")) return new Response(null, { status: 204 });
       if (url.endsWith("/actions/permissions")) return new Response(null, { status: 204 });
@@ -54,7 +60,6 @@ describe("GitHubWriter.createProductRepository", () => {
       pipelineOwner: undefined,
       pipelineRepository: "empty-produkt",
       pipelineBranch: "main",
-      productRepositoriesPrivate: true,
       productSecrets: { TAMBINOS_PAT: "github-token-value", DEEPSEEK_API_KEY: "deepseek-key" },
     };
     const result = await new GitHubWriter(config).createProductRepository({
@@ -86,6 +91,9 @@ describe("GitHubWriter.createProductRepository", () => {
       },
     });
 
+    if (newRepository) {
+      expect(requests.find((request) => request.url.endsWith("/user/repos"))?.body).toMatchObject({ private: false });
+    }
     expect(result).toEqual({
       fullName: "manager-account/test-product",
       issueNumber: 1,
@@ -105,5 +113,34 @@ describe("GitHubWriter.createProductRepository", () => {
       { enabled: false },
       { enabled: true, allowed_actions: "all" },
     ]);
+  });
+});
+
+
+describe("GitHubWriter.ensureProductLicense", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const writer = () => new GitHubWriter({} as GitHubConfig);
+
+  it("preserves an existing template license", async () => {
+    const fetchMock = vi.fn(async () => json({ sha: "license" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await writer().ensureProductLicense("manager/product", "manager");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds MIT when no license exists", async () => {
+    let license = "";
+    vi.stubGlobal("fetch", vi.fn(async (_input: unknown, init?: RequestInit) => {
+      if (init?.method === "PUT") {
+        const body = JSON.parse(String(init.body));
+        license = Buffer.from(body.content, "base64").toString("utf8");
+        return json({});
+      }
+      return json({ message: "Not Found" }, 404);
+    }));
+    await writer().ensureProductLicense("manager/product", "manager");
+    expect(license).toContain("MIT License");
+    expect(license).toContain(`${new Date().getUTCFullYear()} manager`);
+    expect(license).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
   });
 });

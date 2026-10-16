@@ -32,9 +32,11 @@ Scheitert eine Prüfung, wird ohne Seiteneffekt ein ablehnender
 1. Reserviere einen Slot und speichere den internen Entwicklungsauftrag atomar
    im Factory-Zustand.
 2. Erstelle unter dem authentifizierten Manager-GitHub-Konto ein eigenständiges
-   Repository mit dem Produkt-Slug als Namen.
+   öffentliches Repository mit dem Produkt-Slug als Namen.
+   Neue Produkt-Repositories sind immer public.
 3. Kopiere `<Manager-Konto>/empty-produkt` vom Branch `main` ohne dessen Git-Historie
    auf den Zielbranch `main` und konfiguriere die benötigten Actions-Secrets.
+   Erhalte eine vorhandene Template-Lizenz; fehlt sie, ergänze eine MIT-Lizenz.
 4. Erzeuge das Label `scope-override` und eröffne genau ein zugewiesenes Issue
    mit dem Titel `Begin <Produktname>` und dem vollständigen Sales-Pitch.
 5. Wiederhole bei einem Retry keine bereits bestätigte Repo- oder Issue-Aktion;

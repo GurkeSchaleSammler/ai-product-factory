@@ -55,7 +55,6 @@ spec:
             - { name: GITHUB_PRODUCT_OWNER, value: {{ .Values.config.githubProductOwner | quote }} }
             - { name: GITHUB_PIPELINE_REPOSITORY, value: {{ .Values.config.githubPipelineRepository | quote }} }
             - { name: GITHUB_PIPELINE_BRANCH, value: {{ .Values.config.githubPipelineBranch | quote }} }
-            - { name: GITHUB_PRODUCT_REPOSITORIES_PRIVATE, value: {{ .Values.config.githubProductRepositoriesPrivate | quote }} }
             - { name: GITHUB_OWNER, value: {{ .Values.config.githubOwner | quote }} }
             - { name: GITHUB_HELM_REPOSITORY, value: {{ .Values.config.githubHelmRepository | quote }} }
             - { name: GITHUB_GITOPS_REPOSITORY, value: {{ .Values.config.githubGitopsRepository | quote }} }
